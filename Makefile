@@ -28,6 +28,7 @@ OBJ_FILES=$(SRC_FILES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 $(TARGET): $(OBJ_DIR) $(OBJ_FILES)
 	$(CC) $(OBJ_FILES) -o $(TARGET) $(LFLAGS)
+	strip $(TARGET)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
@@ -39,11 +40,16 @@ clean:
 	rm -rf $(OBJ_DIR)
 	rm $(TARGET)
 
+updatebin:
+	mkdir -p bin/linux/
+	cp $(TARGET) bin/linux/
+
 install:
-	mkdir -p $(DESTDIR)$(exec_prefix)/lib/gimp/2.0/plug-ins
-	cp $(TARGET) $(DESTDIR)$(exec_prefix)/lib/gimp/2.0/plug-ins
+# $(DESTDIR)$(exec_prefix)/lib/gimp/2.0/plug-ins
+	mkdir -p ~/.config/GIMP/2.10/plug-ins
+	cp $(TARGET) ~/.config/GIMP/2.10/plug-ins
 
 uninstall:
-	rm $(DESTDIR)$(exec_prefix)/lib/gimp/2.0/plug-ins/$(TARGET)
+	rm ~/.config/GIMP/2.10/plug-ins/$(TARGET)
 
 .PHONY: clean install uninstall
