@@ -329,16 +329,10 @@ static void process(GimpDrawable * drawable, GimpPreview * preview) {
     guchar       * row;
     gint         red_mask, green_mask, blue_mask;
 
-    if (preview) {
-        gimp_preview_get_position(preview, &x1, &y1);
-        gimp_preview_get_size(preview, &width, &height);
-        x2 = x1 + width;
-        y2 = y1 + height;
-    } else {
-        gimp_drawable_mask_bounds (drawable->drawable_id, &x1, &y1, &x2, &y2);
-        width  = x2 - x1;
-        height = y2 - y1;
-    }
+    // Get the working image area (either a selected sub region or the entire image area)
+    gimp_drawable_mask_bounds (drawable->drawable_id, &x1, &y1, &x2, &y2);
+    width  = x2 - x1;
+    height = y2 - y1;
 
     gimp_tile_cache_ntiles(2 * (drawable->width / gimp_tile_width() + 1));
 
@@ -371,6 +365,8 @@ static void process(GimpDrawable * drawable, GimpPreview * preview) {
     blue_mask  = ((1 << settings.blue_depth)  - 1) << (8 - settings.blue_depth);
 
     for (gint cur_y = 0; cur_y < height; cur_y++) {
+
+        // Read a row of image data
         gimp_pixel_rgn_get_row( &rgn_in, row, x1, y1 + cur_y, width);
 
         for (gint cur_x = 0; cur_x < width * drawable->bpp; cur_x += drawable->bpp) {
@@ -395,6 +391,7 @@ static void process(GimpDrawable * drawable, GimpPreview * preview) {
             //     row[cur_x], row[cur_x+1], row[cur_x+2]);
         }
 
+        // Write out the row of modified image data
         gimp_pixel_rgn_set_row( &rgn_out, row, x1, y1 + cur_y, width);
     }
 
