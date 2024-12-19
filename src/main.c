@@ -41,8 +41,8 @@ static pluginSettings settings = {
     8,
     8,
     8,
-    TRUE,
-    FALSE
+    FALSE,
+    TRUE
 };
 
 MAIN()
@@ -78,7 +78,12 @@ static void query(void) {
             GIMP_PDB_INT32,
             "blue",
             "Blue channel bit depth (1-8)"
-        }
+        },
+        {
+            GIMP_PDB_INT32,
+            "clamp_bitval",
+            "Clamp to Lowest Bit Value (boolean, 1=on)"
+        }        
     };
 
     gimp_install_procedure(PLUG_IN_PROC,
@@ -97,14 +102,20 @@ static void query(void) {
     gimp_plugin_menu_register(PLUG_IN_PROC, "<Image>/Filters/ColorDepth");
 }
 
-static void run(const gchar * name, gint nparams, const GimpParam * param, gint * nreturn_vals, GimpParam ** return_vals) {
+static void run(const gchar     * name,
+                gint              nparams,
+                const GimpParam * param,
+                gint            * nreturn_vals,
+                GimpParam      ** return_vals) {
+
     static GimpParam values[1];
     GimpPDBStatusType status = GIMP_PDB_SUCCESS;
     GimpRunMode run_mode;
     GimpDrawable * drawable;
 
-    * nreturn_vals = 1;
-    * return_vals = values;
+    // Setting mandatory output values
+    *nreturn_vals = 1;
+    *return_vals = values;
 
     values[0].type = GIMP_PDB_STATUS;
     values[0].data.d_status = status;
@@ -113,19 +124,24 @@ static void run(const gchar * name, gint nparams, const GimpParam * param, gint 
     drawable = gimp_drawable_get(param[2].data.d_drawable);
 
     switch (run_mode) {
+
         case GIMP_RUN_INTERACTIVE:
+            // Get options last values if needed
             gimp_get_data(PLUG_IN_PROC, &settings);
+
+            // Run the dialog
             if (!dialog(drawable))
                 return;
             break;
 
         case GIMP_RUN_NONINTERACTIVE:
-            if (nparams != 6)
-                status = GIMP_PDB_CALLING_ERROR;
+            if (nparams != 7) status = GIMP_PDB_CALLING_ERROR;
+
             if (status == GIMP_PDB_SUCCESS) {
-                settings.red_depth = CLAMP(param[3].data.d_int32, 1, 8);
+                settings.red_depth   = CLAMP(param[3].data.d_int32, 1, 8);
                 settings.green_depth = CLAMP(param[4].data.d_int32, 1, 8);
-                settings.blue_depth = CLAMP(param[5].data.d_int32, 1, 8);
+                settings.blue_depth  = CLAMP(param[5].data.d_int32, 1, 8);
+                settings.clamp_lowest_bitval = CLAMP(param[6].data.d_int32, 0, 1);
             }
             break;
 
@@ -138,16 +154,15 @@ static void run(const gchar * name, gint nparams, const GimpParam * param, gint 
     }
 
     if (status == GIMP_PDB_SUCCESS) {
-        gimp_progress_init("Reducing color depth...");
-        gimp_tile_cache_ntiles(2 * (drawable->width / gimp_tile_width() + 1));
+        gimp_progress_init("Reducing color depth...");        
 
         // Apply the previewed changes to the image
         process(drawable, NULL);
 
         // Try to trigger a redraw.... which only seems to redraw the bottom
         // of the image until another operation is performed...(such as undo, pencil, etc)
-        gimp_drawable_detach(drawable);
         gimp_displays_flush();
+        gimp_drawable_detach(drawable);
 
         // Save settings if in interactive mode
         if (run_mode != GIMP_RUN_NONINTERACTIVE)
@@ -157,8 +172,12 @@ static void run(const gchar * name, gint nparams, const GimpParam * param, gint 
     values[0].data.d_status = status;
 }
 
-    GtkAdjustment * adj_red, * adj_green, * adj_blue;
-    GtkWidget * check_lock_channels, * check_clamp_lowest_bitval;
+
+// ==================== UI ====================
+
+
+GtkAdjustment * adj_red, * adj_green, * adj_blue;
+GtkWidget * check_lock_channels, * check_clamp_lowest_bitval;
 
 static gboolean dialog(GimpDrawable * drawable) {
     GtkWidget * dialog;
@@ -293,6 +312,8 @@ static void ui_checkboxes_update(GtkToggleButton * widget, gpointer callback_dat
 }
 
 
+// ==================== IMAGE PROCESSING ====================
+
 
 #define  TRUNCATE_BIT_DEPTH(value, bit_depth)  (value >> (8 - bit_depth))
 // Spreads the reduced bit depth over the full 256 value range
@@ -302,31 +323,35 @@ static void ui_checkboxes_update(GtkToggleButton * widget, gpointer callback_dat
                                                  ((float)TRUNCATE_BIT_DEPTH(value, bit_depth) / (float)((1 << bit_depth) - 1)) ))
 
 static void process(GimpDrawable * drawable, GimpPreview * preview) {
-    gint x, y;
-    gint width, height;
+    gint         x1, y1, x2, y2;
+    gint         width, height;
     GimpPixelRgn rgn_in, rgn_out;
-    guchar * row;
-    gint red_mask, green_mask, blue_mask;
+    guchar       * row;
+    gint         red_mask, green_mask, blue_mask;
 
     if (preview) {
-        gimp_preview_get_position(preview, &x, &y);
+        gimp_preview_get_position(preview, &x1, &y1);
         gimp_preview_get_size(preview, &width, &height);
+        x2 = x1 + width;
+        y2 = y1 + height;
     } else {
-        gimp_drawable_mask_bounds(drawable->drawable_id, &x, &y, &width, &height);
-        width -= x;
-        height -= y;
+        gimp_drawable_mask_bounds (drawable->drawable_id, &x1, &y1, &x2, &y2);
+        width  = x2 - x1;
+        height = y2 - y1;
     }
+
+    gimp_tile_cache_ntiles(2 * (drawable->width / gimp_tile_width() + 1));
 
     row = g_new(guchar, width * drawable->bpp);
 
     // Source image data
-    gimp_pixel_rgn_init( &rgn_in, drawable, x, y, width, height, FALSE, FALSE);
+    gimp_pixel_rgn_init( &rgn_in, drawable, x1, y1, width, height, FALSE, FALSE);
 
     // Output/Preview image data
     if (preview)
-        gimp_pixel_rgn_init( &rgn_out, drawable, x, y, width, height, FALSE, TRUE);
+        gimp_pixel_rgn_init( &rgn_out, drawable, x1, y1, width, height, FALSE, TRUE);
     else
-        gimp_pixel_rgn_init( &rgn_out, drawable, x, y, width, height, TRUE, TRUE);
+        gimp_pixel_rgn_init( &rgn_out, drawable, x1, y1, width, height, TRUE, TRUE);
 
     // This is a terrible hack
     //
@@ -341,36 +366,36 @@ static void process(GimpDrawable * drawable, GimpPreview * preview) {
     GeglBuffer * buffer = gimp_drawable_get_buffer(drawable);
 
 
-    red_mask = ((1 << settings.red_depth) - 1) << (8 - settings.red_depth);
-    green_mask = (1 << settings.green_depth) - 1 << (8 - settings.green_depth);
-    blue_mask = (1 << settings.blue_depth) - 1 << (8 - settings.blue_depth);
+    red_mask   = ((1 << settings.red_depth)   - 1) << (8 - settings.red_depth);
+    green_mask = ((1 << settings.green_depth) - 1) << (8 - settings.green_depth);
+    blue_mask  = ((1 << settings.blue_depth)  - 1) << (8 - settings.blue_depth);
 
-    for (y = 0; y < height; y++) {
-        gimp_pixel_rgn_get_row( &rgn_in, row, x, y, width);
+    for (gint cur_y = 0; cur_y < height; cur_y++) {
+        gimp_pixel_rgn_get_row( &rgn_in, row, x1, y1 + cur_y, width);
 
-        for (gint i = 0; i < width * drawable->bpp; i += drawable->bpp) {
+        for (gint cur_x = 0; cur_x < width * drawable->bpp; cur_x += drawable->bpp) {
             // Debug for checking whether gimp is mangling the rgb values with color/gamma correction
-            //  if ((y==6) || (y == 15)) printf("%d: %d = %2d, %2d, %2d", y, i / drawable->bpp, 
-            //      row[i], row[i+1], row[i+2]);
+            //  if ((cur_y==6) || (cur_y == 15)) printf("%d: %d = %2d, %2d, %2d", cur_y, cur_x / drawable->bpp, 
+            //      row[cur_x], row[cur_x+1], row[cur_x+2]);
 
             if (settings.clamp_lowest_bitval) {
                 // Clamp truncation style (rounds down to nearest bit depth boundary)
-                row[i]     = (row[i]     & red_mask);
-                row[i + 1] = (row[i + 1] & green_mask);
-                row[i + 2] = (row[i + 2] & blue_mask);
+                row[cur_x]     = (row[cur_x]     & red_mask);
+                row[cur_x + 1] = (row[cur_x + 1] & green_mask);
+                row[cur_x + 2] = (row[cur_x + 2] & blue_mask);
             } else {
                 // Clamp to utilize full range, resulting value is higher or lower
                 // in bit depth band based on how bright or dim it is.
-                row[i]     = CLAMP_SPREAD_RANGE(row[i    ], settings.red_depth);
-                row[i + 1] = CLAMP_SPREAD_RANGE(row[i + 1], settings.green_depth);
-                row[i + 2] = CLAMP_SPREAD_RANGE(row[i + 2], settings.blue_depth);
+                row[cur_x]     = CLAMP_SPREAD_RANGE(row[cur_x    ], settings.red_depth);
+                row[cur_x + 1] = CLAMP_SPREAD_RANGE(row[cur_x + 1], settings.green_depth);
+                row[cur_x + 2] = CLAMP_SPREAD_RANGE(row[cur_x + 2], settings.blue_depth);
             }
 
-            // if ((y==6) || (y == 15)) printf(" -> %2d, %2d, %2d\n",
-            //     row[i], row[i+1], row[i+2]);
+            // if ((cur_y==6) || (cur_y == 15)) printf(" -> %2d, %2d, %2d\n",
+            //     row[cur_x], row[cur_x+1], row[cur_x+2]);
         }
 
-        gimp_pixel_rgn_set_row( &rgn_out, row, x, y, width);
+        gimp_pixel_rgn_set_row( &rgn_out, row, x1, y1 + cur_y, width);
     }
 
     g_free(row);
@@ -381,7 +406,9 @@ static void process(GimpDrawable * drawable, GimpPreview * preview) {
     } else {
         gimp_drawable_flush(drawable);
         gimp_drawable_merge_shadow(drawable->drawable_id, TRUE);
-        gimp_drawable_update(drawable->drawable_id, x, y, width, height);
-        gimp_drawable_free_shadow(drawable->drawable_id);
+        gimp_drawable_update(drawable->drawable_id, x1, y1, width, height);
     }
 }
+
+
+
