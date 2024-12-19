@@ -99,7 +99,7 @@ static void query(void) {
         args,
         NULL);
 
-    gimp_plugin_menu_register(PLUG_IN_PROC, "<Image>/Filters/ColorDepth");
+    gimp_plugin_menu_register(PLUG_IN_PROC, "<Image>/Colors/Map");
 }
 
 static void run(const gchar     * name,
