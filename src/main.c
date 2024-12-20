@@ -82,24 +82,24 @@ static void query(void) {
         {
             GIMP_PDB_INT32,
             "clamp_bitval",
-            "Clamp to Lowest Bit Value (boolean, 1=on)"
+            "Clamp to Lowest Bit Values (boolean, 1=on)"
         }        
     };
 
     gimp_install_procedure(PLUG_IN_PROC,
-        "Reduce color depth per channel",
-        "Allows interactive reduction of color depth for each RGB channel",
+        "Reduce color bit-depth per channel",
+        "Allows interactive reduction of color bit-depth for each RGB channel",
         "--",
         "--",
         "2023",
-        "_Color Depth Reduction...",
+        "_Reduce Color Bit-Depth...",
         "RGB*",
         GIMP_PLUGIN,
         G_N_ELEMENTS(args), 0,
         args,
         NULL);
 
-    gimp_plugin_menu_register(PLUG_IN_PROC, "<Image>/Filters/ColorDepth");
+    gimp_plugin_menu_register(PLUG_IN_PROC, "<Image>/Colors");
 }
 
 static void run(const gchar     * name,
@@ -154,7 +154,7 @@ static void run(const gchar     * name,
     }
 
     if (status == GIMP_PDB_SUCCESS) {
-        gimp_progress_init("Reducing color depth...");        
+        gimp_progress_init("Reducing Color Bit-Depth...");        
 
         // Apply the previewed changes to the image
         process(drawable, NULL);
@@ -189,7 +189,7 @@ static gboolean dialog(GimpDrawable * drawable) {
 
     gimp_ui_init(PLUG_IN_BINARY, FALSE);
 
-    dialog = gimp_dialog_new("Color Depth Reduction", PLUG_IN_ROLE,
+    dialog = gimp_dialog_new("Reduce Color Bit-Depth", PLUG_IN_ROLE,
         NULL, 0,
         gimp_standard_help_func, PLUG_IN_PROC,
         GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
@@ -233,7 +233,7 @@ static gboolean dialog(GimpDrawable * drawable) {
   
     check_clamp_lowest_bitval = gtk_check_button_new();
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check_clamp_lowest_bitval), settings.clamp_lowest_bitval);
-    gimp_table_attach_aligned(GTK_TABLE(table), 0, 4, "Clamp to Lowest Bit Value\n", 0.0, 0.5, check_clamp_lowest_bitval, 1, FALSE);
+    gimp_table_attach_aligned(GTK_TABLE(table), 0, 4, "Clamp to Lowest Bit Values\n", 0.0, 0.5, check_clamp_lowest_bitval, 1, FALSE);
   
 
     // Set up UI event signals

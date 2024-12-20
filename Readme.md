@@ -3,7 +3,16 @@ Allows for reducing the color bit-depth of the R/G/B channels source images (RGB
 
 For example it can reduce an RGB-888 image to bit-depths used by old game consoles such as the Game Boy Color(BGR-555), Game Gear(BGR-444), or Sega Master System(BGR-222).
 
+The functionality is similar to the built-in `Colors -> Dither` plugin except that it ensures alignment of color reductions to be within scaled bit-depth boundaries instead of arbitrary ranges.
+
+## Menu
+The plugin menu location is: `Colors -> Reduce Color Bit-Depth...`
+
+## Compatibility
+At least compatible with some versions of GIMP 2.10 on Linux
+
 
 Screenshot:
 
 ![GIMP Image Editor using Reduce Color Depth Plugin](/info/gimp-plugin-reduce-color-depth.png)
+
