@@ -215,15 +215,15 @@ static gboolean dialog(GimpDrawable * drawable) {
     gtk_box_pack_start(GTK_BOX(main_vbox), table, FALSE, FALSE, 0);
     gtk_widget_show(table);
 
-    adj_red = gtk_adjustment_new(settings.red_depth, 1, 8, 1, 1, 0);
+    adj_red = (GtkAdjustment *)gtk_adjustment_new(settings.red_depth, 1, 8, 1, 1, 0);
     spin_red = gtk_spin_button_new(adj_red, 1.0, 0);
     gimp_table_attach_aligned(GTK_TABLE(table), 0, 0, "Red Channel Depth:", 0.0, 0.5, spin_red, 1, TRUE);
 
-    adj_green = gtk_adjustment_new(settings.green_depth, 1, 8, 1, 1, 0);
+    adj_green = (GtkAdjustment *)gtk_adjustment_new(settings.green_depth, 1, 8, 1, 1, 0);
     spin_green = gtk_spin_button_new(adj_green, 1.0, 0);
     gimp_table_attach_aligned(GTK_TABLE(table), 0, 1, "Green Channel Depth:", 0.0, 0.5, spin_green, 1, TRUE);
 
-    adj_blue = gtk_adjustment_new(settings.blue_depth, 1, 8, 1, 1, 0);
+    adj_blue = (GtkAdjustment *)gtk_adjustment_new(settings.blue_depth, 1, 8, 1, 1, 0);
     spin_blue = gtk_spin_button_new(adj_blue, 1.0, 0);
     gimp_table_attach_aligned(GTK_TABLE(table), 0, 2, "Blue Channel Depth:", 0.0, 0.5, spin_blue, 1, TRUE);
 
@@ -308,7 +308,7 @@ static void ui_checkboxes_update(GtkToggleButton * widget, gpointer callback_dat
     settings.clamp_lowest_bitval = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(check_clamp_lowest_bitval));
 
     if (settings.lock_channels)
-        ui_locked_channels_sync(adj_red, &settings.red_depth);
+        ui_locked_channels_sync((GtkWidget *)adj_red, &settings.red_depth);
 }
 
 
@@ -357,7 +357,7 @@ static void process(GimpDrawable * drawable, GimpPreview * preview) {
     //
     // It doesn't seem to actually allocate the buffer (flushing with it fails, there are no
     // reported GEGL buffer leaks on app shutdown), so I guess we won't bother to free it.
-    GeglBuffer * buffer = gimp_drawable_get_buffer(drawable);
+    GeglBuffer * buffer = gimp_drawable_get_buffer(drawable->drawable_id);
 
 
     red_mask   = ((1 << settings.red_depth)   - 1) << (8 - settings.red_depth);

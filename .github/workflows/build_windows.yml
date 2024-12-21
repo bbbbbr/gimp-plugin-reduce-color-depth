@@ -32,27 +32,29 @@ jobs:
     - name: Install msys2 build environment
       uses: msys2/setup-msys2@v2
       with:
-        msystem: $
+        msystem: ${{ matrix.msystem }}
         update: false
-        install: base-devel git $-toolchain $-gimp
+        install: base-devel git ${{ matrix.toolchain }}-toolchain ${{ matrix.toolchain }}-gimp
+  
           
     - run: git config --global core.autocrlf input
       shell: bash
       
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     
     - name: Build plugin
       shell: msys2 {0}
       run: |
         echo $(gimptool-2.0 -n --build src/main.c) | sh
+        mv main.exe plugin-gimp-reduce-colordepth-${{ matrix.version }}.exe
         ls
   
     - name: Get GIMP version
       shell: msys2 {0}
-      run: echo "GIMPVER=$(pacman -Q  $-gimp | cut -d ' ' -f 2)" >> $GITHUB_ENV
+      run: echo "GIMPVER=$(pacman -Q ${{ matrix.toolchain }}-gimp | cut -d ' ' -f 2)" >> $GITHUB_ENV
         
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
-        name: plugin-gimp-reduce-colordepth$_$
+        name: plugin-gimp-reduce-colordepth_${{ env.GIMPVER }}_${{ matrix.version }}
         path: |
-          ./plugin-gimp-reduce-colordepth.exe
+          ./plugin-gimp-reduce-colordepth-${{ matrix.version }}.exe
