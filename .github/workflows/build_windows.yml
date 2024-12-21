@@ -1,0 +1,58 @@
+name: Build Windows
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  CI: true
+
+jobs:
+  win:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include: [
+          {msystem: MINGW32, toolchain: mingw-w64-i686, version: x32 },
+          {msystem: MINGW64, toolchain: mingw-w64-x86_64, version: x64 },
+        ]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - name: Install msys2 build environment
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: $
+        update: false
+        install: base-devel git $-toolchain $-gimp
+          
+    - run: git config --global core.autocrlf input
+      shell: bash
+      
+    - uses: actions/checkout@v2
+    
+    - name: Build plugin
+      shell: msys2 {0}
+      run: |
+        echo $(gimptool-2.0 -n --build src/main.c) | sh
+        ls
+  
+    - name: Get GIMP version
+      shell: msys2 {0}
+      run: echo "GIMPVER=$(pacman -Q  $-gimp | cut -d ' ' -f 2)" >> $GITHUB_ENV
+        
+    - uses: actions/upload-artifact@v2
+      with:
+        name: plugin-gimp-reduce-colordepth$_$
+        path: |
+          ./plugin-gimp-reduce-colordepth.exe
