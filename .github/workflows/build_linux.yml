@@ -1,0 +1,46 @@
+name: Build Linux
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  # Triggers the workflow on push or pull request events but only for the develop branch
+  # push:
+  #   branches: [ develop ]
+  # pull_request:
+  #   branches: [ develop ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            name: Linux-x64
+          # - os: macos-13
+          #   name: MacOS-x64
+          # - os: macos-14
+          #   name: MacOS-arm64
+    steps:
+
+      - name: Linux Depends
+        if: matrix.name == 'Linux-x64'
+        run: |
+          sudo apt-get install libgimp2.0-dev
+
+
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Build Linux
+        if: (matrix.name == 'Linux-x64')
+        shell: bash
+        run: |
+          make
+
+      - name: Store build
+        if: (matrix.name == 'Linux-x64')
+        uses: actions/upload-artifact@v4
+        with:
+          name: gimp-reduce-colordepth_Linux_x64
+          path: plugin-gimp-reduce-colordepth
