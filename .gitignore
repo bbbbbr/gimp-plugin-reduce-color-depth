@@ -1,5 +1,6 @@
 plugin-gimp-reduce-colordepth
 *.zip
 *.7z
+*.gz
 obj/
 src/reference/
