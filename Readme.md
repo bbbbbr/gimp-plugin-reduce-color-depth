@@ -9,7 +9,17 @@ The functionality is similar to the built-in `Colors -> Dither` plugin except th
 The plugin menu location is: `Colors -> Reduce Color Bit-Depth...`
 
 ## Compatibility
-At least compatible with some versions of GIMP 2.10 on Linux
+At least compatible with some versions of GIMP 2.10 on Linux and Windows.
+
+## Download
+Pre-built binaries can be downloaded from the [Releases section](https://github.com/bbbbbr/gimp-plugin-reduce-color-depth/releases).
+
+## Install
+Copy the plugin file to the relevant location below.
+
+Plug-in folder locations:
+- Linux: `~/.config/GIMP/2.10/plug-ins`
+- Windows: `C:\Program Files\GIMP 2\lib\gimp\2.0\plug-ins`
 
 
 Screenshot:
